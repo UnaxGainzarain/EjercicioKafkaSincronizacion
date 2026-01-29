@@ -18,10 +18,10 @@ public class ProductorEmpleado {
                 + "\"titulo\": \"Informe Trimestral\","
                 + "\"documento\": \"Este es el contenido del documento que es muy largo y debe ser dividido en paginas de 400 caracteres para poder ser impreso correctamente por las impresoras antiguas...\"," 
                 + "\"tipo\": \"B/N\","
-                + "\"sender\": \"Miguel Goyena\""
+                + "\"sender\": \"Unax Osaba\""
                 + "}";
         
-        ProducerRecord<String, String> record = new ProducerRecord<>(TOPIC, "Miguel Goyena", jsonTrabajo);
+        ProducerRecord<String, String> record = new ProducerRecord<>(TOPIC, "Unax Osaba", jsonTrabajo);
         
         try {
             producer.send(record);
