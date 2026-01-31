@@ -1,61 +1,62 @@
 package org.cuatrovientos.impresoras;
 
-import org.apache.kafka.clients.producer.*;
-import org.apache.kafka.common.serialization.StringSerializer;
-import java.util.Properties;
 import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.io.File;
-import java.io.FileWriter;
+import java.io.IOException;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
 
-public class Archivador {
-	public static void main(String[] args) {
-		Properties props = new Properties();
-		props.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-		props.setProperty(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-		props.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-		// IMPORTANTE: Group ID único para archivado [cite: 190]
-		props.setProperty(ConsumerConfig.GROUP_ID_CONFIG, "grupo-archivado");
-		props.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+public class Archivador implements Runnable { 
 
-		KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props);
-		consumer.subscribe(Collections.singletonList("trabajos-entrada"));
+    @Override
+    public void run() {
+        Properties props = new Properties();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "grupo-archivadores"); 
+        
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, DocumentDeserializer.class.getName());
 
-		System.out.println(">> Archivador iniciado. Esperando mensajes...");
+        KafkaConsumer<String, Document> consumer = new KafkaConsumer<>(props);
+        consumer.subscribe(Collections.singletonList("topic-recepcion"));
 
-		while (true) {
-			ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100)); // [cite: 277]
-			for (ConsumerRecord<String, String> record : records) {
-				guardarEnDisco(record.value());
-			}
-		}
-	}
+        ObjectMapper objectMapper = new ObjectMapper(); 
 
-	private static void guardarEnDisco(String json) {
-		try {
-			// Extraer sender 
-			
-			String sender = "desconocido";
-			if (json.contains("\"sender\":")) {
-				sender = json.split("\"sender\":")[1].split("\"")[1];
-			}
+        System.out.println(" Archivador iniciado en hilo: " + Thread.currentThread().getName());
 
-			// Crear carpeta por sender
-			File carpeta = new File("backup_archivos/" + sender);
-			if (!carpeta.exists())
-				carpeta.mkdirs();
+        try {
+            while (true) {
+                ConsumerRecords<String, Document> records = consumer.poll(Duration.ofMillis(100));
 
-			File file = new File(carpeta, "doc_" + System.currentTimeMillis() + ".json");
-			try (FileWriter fw = new FileWriter(file)) {
-				fw.write(json);
-			}
-			System.out.println(">> Archivador: Guardado backup de " + sender);
-		} catch (Exception e) {
-			System.err.println("Error archivando: " + e.getMessage());
-		}
-	}
+                for (ConsumerRecord<String, Document> record : records) {
+                    Document doc = record.value();
+                    System.out.println(" [Archivador] Guardando copia de: " + doc.getSender());
+                    
+                    guardarEnCarpetaSender(doc, objectMapper);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            consumer.close();
+        }
+    }
 
+    private void guardarEnCarpetaSender(Document doc, ObjectMapper mapper) {
+        File directorio = new File("archivados/" + doc.getSender());
+        if (!directorio.exists()) directorio.mkdirs();
+
+        File archivo = new File(directorio, doc.getTitle() + ".json");
+
+        try {
+            mapper.writeValue(archivo, doc);
+        } catch (IOException e) {
+            System.err.println("Error guardando JSON: " + e.getMessage());
+        }
+    }
 }
