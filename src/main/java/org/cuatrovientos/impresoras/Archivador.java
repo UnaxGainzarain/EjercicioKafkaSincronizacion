@@ -1,3 +1,4 @@
+package org.cuatrovientos.impresoras;
 
 import org.apache.kafka.clients.producer.*;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -10,7 +11,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
 
-public class ArchivadorService {
+public class Archivador {
 	public static void main(String[] args) {
 		Properties props = new Properties();
 		props.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
