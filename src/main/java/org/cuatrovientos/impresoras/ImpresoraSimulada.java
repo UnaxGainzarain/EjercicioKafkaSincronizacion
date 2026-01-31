@@ -1,5 +1,13 @@
 package org.cuatrovientos.impresoras;
 
-public class ImpresoraSimulada {
+import java.util.List;
 
+public class ImpresoraSimulada {
+	public enum ModoImpresion {
+	    COLOR,
+	    BLANCO_NEGRO,
+	}
+	
+	public List<Document> listaDocumentos;
+	
 }
