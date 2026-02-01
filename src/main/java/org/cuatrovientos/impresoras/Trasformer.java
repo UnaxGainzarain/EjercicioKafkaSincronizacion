@@ -36,7 +36,7 @@ public class Trasformer implements Runnable {
 
         KafkaProducer<String, String> producer = new KafkaProducer<>(propsProd);
 
-        System.out.println("⚙️ Transformador iniciado en hilo: " + Thread.currentThread().getName());
+        System.out.println("Transformador iniciado en hilo: " + Thread.currentThread().getName());
 
         try {
             while (true) {
@@ -44,7 +44,7 @@ public class Trasformer implements Runnable {
 
                 for (ConsumerRecord<String, Document> record : records) {
                     Document doc = record.value();
-                    System.out.println("⚙️ [Transformador] Procesando documento: " + doc.getTitle());
+                    System.out.println("[Transformador] Procesando documento: " + doc.getTitle());
 
                     procesarYEnviar(doc, producer);
                 }
