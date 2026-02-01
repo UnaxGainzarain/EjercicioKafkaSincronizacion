@@ -1,16 +1,14 @@
 package org.cuatrovientos.impresoras;
 
-import com.fasterxml.jackson.annotation.JsonProperty; // <--- NECESARIO PARA QUE NO DE ERROR
+import com.fasterxml.jackson.annotation.JsonProperty; 
 
 public class Document {
     
-    // Ponemos las propiedades privadas (Mejor práctica)
     private String sender;
     private String title;
     private String content;
     private ModoImpresion modo; 
 
-    // Definimos el Enum
     public enum ModoImpresion {
         @JsonProperty("Color")
         COLOR,
