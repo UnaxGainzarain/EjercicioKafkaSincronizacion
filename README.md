@@ -95,7 +95,7 @@ Para reiniciar el sistema completamente y borrar todos los mensajes pendientes, 
     ```bash
     bin/kafka-topics.sh --delete --topic topic-recepcion --bootstrap-server localhost:9092
     bin/kafka-topics.sh --delete --topic topic-color --bootstrap-server localhost:9092
-    bin/kafka-topics.sh --delete --topic topic-bn --bootstrap-server localhost:9092
+    bin/kafka-topics.sh --create --topic topic-bn --partitions 3 --bootstrap-server localhost:9092
     ```
 3.  **Limpiar archivos locales:**
     - Borra manualmente las carpetas `archivados/` e `impresiones/` que se generan en la raíz del proyecto para eliminar los archivos de ejecuciones anteriores.
