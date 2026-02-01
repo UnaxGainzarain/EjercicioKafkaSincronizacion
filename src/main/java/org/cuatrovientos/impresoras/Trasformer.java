@@ -1,6 +1,5 @@
 package org.cuatrovientos.impresoras;
 
-
 import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.clients.producer.*;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -11,56 +10,81 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
 
-public class Trasformer {
+public class Trasformer implements Runnable {
 
-    public static void main(String[] args) {
-        Properties propsConsumer = new Properties();
-        propsConsumer.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-        propsConsumer.put(ConsumerConfig.GROUP_ID_CONFIG, "grupo-transformadores"); // ¡Importante!
-        propsConsumer.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        propsConsumer.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, DocumentDeserializer.class.getName());
+    @Override
+    public void run() {
+        
+        Properties propsCons = new Properties();
+        propsCons.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        
+        propsCons.put(ConsumerConfig.GROUP_ID_CONFIG, "grupo-transformadores"); 
+        
+        propsCons.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        propsCons.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, DocumentDeserializer.class.getName());
 
-        KafkaConsumer<String, Document> consumer = new KafkaConsumer<>(propsConsumer);
+        KafkaConsumer<String, Document> consumer = new KafkaConsumer<>(propsCons);
         consumer.subscribe(Collections.singletonList("topic-recepcion"));
 
+
+     
+        Properties propsProd = new Properties();
+        propsProd.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
         
-        Properties propsProducer = new Properties();
-        propsProducer.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-        propsProducer.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        propsProducer.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        propsProd.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        propsProd.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
 
-        KafkaProducer<String, String> producer = new KafkaProducer<>(propsProducer);
+        KafkaProducer<String, String> producer = new KafkaProducer<>(propsProd);
 
-        System.out.println("Transformador iniciado. Esperando documentos...");
+        System.out.println("⚙️ Transformador iniciado en hilo: " + Thread.currentThread().getName());
 
-        while (true) {
-            ConsumerRecords<String, Document> records = consumer.poll(Duration.ofMillis(100));
+        try {
+            while (true) {
+                ConsumerRecords<String, Document> records = consumer.poll(Duration.ofMillis(100));
 
-            for (ConsumerRecord<String, Document> record : records) {
-                Document doc = record.value();
-                System.out.println("Procesando documento: " + doc.getTitle());
+                for (ConsumerRecord<String, Document> record : records) {
+                    Document doc = record.value();
+                    System.out.println("⚙️ [Transformador] Procesando documento: " + doc.getTitle());
 
-                int tamanoPagina = 400;
-                String texto = doc.getContent();
-                int totalLength = texto.length();
-                
-                int paginas = (int) Math.ceil((double) totalLength / tamanoPagina);
-
-                String topicDestino = (doc.getModo() == ModoImpresion.COLOR) ? "topic-color" : "topic-bn";
-
-                for (int i = 0; i < paginas; i++) {
-                    int start = i * tamanoPagina;
-                    int end = Math.min(start + tamanoPagina, totalLength);
-                    
-                    String contenidoPagina = texto.substring(start, end);
-                    String mensajeFinal = "Doc: " + doc.getTitle() + " [Pag " + (i+1) + "]: " + contenidoPagina;
-
-                    producer.send(new ProducerRecord<>(topicDestino, mensajeFinal));
-                    System.out.println(" -> Página " + (i+1) + " enviada a " + topicDestino);
+                    procesarYEnviar(doc, producer);
                 }
             }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            consumer.close();
+            producer.close();
+        }
+    }
+
+    private void procesarYEnviar(Document doc, KafkaProducer<String, String> producer) {
+        String textoCompleto = doc.getContent();
+        int longitud = textoCompleto.length();
+        int tamanoPagina = 400;
+
+        int totalPaginas = (int) Math.ceil((double) longitud / tamanoPagina);
+
+        String topicDestino;
+        if (doc.getModo() == ModoImpresion.COLOR) {
+            topicDestino = "topic-color";
+        } else {
+            topicDestino = "topic-bn";
+        }
+
+        for (int i = 0; i < totalPaginas; i++) {
+            int inicio = i * tamanoPagina;
+            int fin = Math.min(inicio + tamanoPagina, longitud);
+            
+            String contenidoPagina = textoCompleto.substring(inicio, fin);
+            
+            String mensajeParaImpresora = String.format(
+                "DOC: '%s' [Pág %d/%d] -> %s", 
+                doc.getTitle(), (i + 1), totalPaginas, contenidoPagina
+            );
+
+            producer.send(new ProducerRecord<>(topicDestino, mensajeParaImpresora));
+            
+            System.out.println("   -> Enviada página " + (i + 1) + " a " + topicDestino);
         }
     }
 }
-
-	
