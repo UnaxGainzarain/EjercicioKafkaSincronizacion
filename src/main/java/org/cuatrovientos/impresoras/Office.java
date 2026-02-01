@@ -4,52 +4,62 @@ import org.cuatrovientos.impresoras.Document.ModoImpresion;
 
 public class Office {
 
-	public static void main(String[] args) {
-		System.out.println(" INICIANDO SISTEMA DE LA OFICINA");
+    public static void main(String[] args) {
+        System.out.println(" INICIANDO SISTEMA DE LA OFICINA");
 
-		System.out.println("Arrancando servicios en segundo plano");
+        System.out.println("Arrancando servicios en segundo plano");
 
-		new Thread(new Archivador()).start();
-		new Thread(new Trasformer()).start();
+        
+        Thread hiloArchivador = new Thread(new Archivador());
+        hiloArchivador.setDaemon(true); 
+        hiloArchivador.start();
 
-		for (int i = 1; i <= 3; i++) {
-			new Thread(new ImpresoraSimulada(i, ModoImpresion.BLANCO_NEGRO)).start();
-		}
-		for (int i = 1; i <= 2; i++) {
-			new Thread(new ImpresoraSimulada(i, ModoImpresion.COLOR)).start();
-		}
+        Thread hiloTransformer = new Thread(new Trasformer()); 
+        hiloTransformer.setDaemon(true);
+        hiloTransformer.start();
 
-		esperar(2000);
-		System.out.println(" INFRAESTRUCTURA LISTA. ESPERANDO TRABAJOS.\n");
+        for (int i = 1; i <= 3; i++) {
+            Thread hiloImpresoraBN = new Thread(new ImpresoraSimulada(i, ModoImpresion.BLANCO_NEGRO));
+            hiloImpresoraBN.setDaemon(true);
+            hiloImpresoraBN.start();
+        }
+        
+        for (int i = 1; i <= 2; i++) {
+            Thread hiloImpresoraColor = new Thread(new ImpresoraSimulada(i, ModoImpresion.COLOR));
+            hiloImpresoraColor.setDaemon(true);
+            hiloImpresoraColor.start();
+        }
 
-		Enployees miguel = new Enployees("Miguel Goyena");
-		Enployees ana = new Enployees("Ana Lopez");
+        esperar(2000);
+        System.out.println(" INFRAESTRUCTURA LISTA. ESPERANDO TRABAJOS.\n");
 
-		System.out.println(">>>Miguel está enviando un acta de reunión...");
-		miguel.mandarImprimir("Acta Reunión", "Asistentes: Todo el equipo. Temas: Kafka y Java.",
-				ModoImpresion.BLANCO_NEGRO);
+        Enployees miguel = new Enployees("Miguel Goyena");
+        Enployees ana = new Enployees("Ana Lopez");
 
-		esperar(3000);
-		System.out.println("\n>>> Ana envía un diseño gráfico MUY GRANDE...");
+        System.out.println(">>>Miguel está enviando un acta de reunión...");
+        miguel.mandarImprimir("Acta Reunión", "Asistentes: Todo el equipo. Temas: Kafka y Java.",
+                ModoImpresion.BLANCO_NEGRO);
 
-		String textoLargo = "A".repeat(300) + " [FIN PAG 1] " + "B".repeat(300) + " [FIN PAG 2]";
+        esperar(3000);
+        System.out.println("\n>>> Ana envía un diseño gráfico MUY GRANDE...");
 
-		ana.mandarImprimir("Cartel Publicitario", textoLargo, ModoImpresion.COLOR);
+        String textoLargo = "A".repeat(300) + " [FIN PAG 1] " + "B".repeat(300) + " [FIN PAG 2]";
 
-		esperar(3000);
+        ana.mandarImprimir("Cartel Publicitario", textoLargo, ModoImpresion.COLOR);
 
-		System.out.println("\n Jornada laboral terminada (Simulación de envío finalizada).");
+        esperar(3000);
 
-		Kafka.obtenerInstancia().cerrar();
+        System.out.println("\n Jornada laboral terminada (Simulación de envío finalizada).");
 
-	}
+        Kafka.obtenerInstancia().cerrar();
+        
+    }
 
-	private static void esperar(int milisegundos) {
-		try {
-			Thread.sleep(milisegundos);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-	}
-
+    private static void esperar(int milisegundos) {
+        try {
+            Thread.sleep(milisegundos);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
 }
